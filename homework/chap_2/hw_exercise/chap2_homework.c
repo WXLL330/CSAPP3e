@@ -1,5 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <string.h>
+#include <limits.h>
 
 //2.58
 /****************************************************************************/
@@ -141,7 +145,44 @@ int lower_one_mask(int n){
 //2.69
 /******************************************************************************/
 unsigned rotate_left(unsigned x, int n){
+    unsigned w = sizeof(unsigned) << 3;
+    return (x << n) | (x >> (w - n));
+}
+/******************************************************************************/
+
+
+//2.71
+/******************************************************************************/
+typedef unsigned packed_t;
+int xbyte(packed_t word, int bytenum){
+    int maxnum = 3;
+    return (int)word << ((maxnum - bytenum) << 3) >> (maxnum << 3);
+}
+/******************************************************************************/
+
+
+//2.72
+/******************************************************************************/
+void copy_int(int val, void* buf, int maxbytes) {
+  /* compare two signed number, avoid someone set maxbytes a negetive value */
+  if (maxbytes >= (int) sizeof(val)) {
+    memcpy(buf, (void*)&val, sizeof(val));
+  }
+}
+/******************************************************************************/
+
+
+//2.73
+/******************************************************************************/
+int saturating_add(int x, int y){
+    int sum = x + y;
+    bool pos_over = !(x & INT_MIN) && !(y & INT_MIN) && (sum & INT_MIN);
+    bool neg_over = (x & INT_MIN) && (y & INT_MIN) && !(sum & INT_MIN);
+
+    //利用做判断时只要部分满足条件就不会接着往下做的特性
+    (pos_over && (sum = INT_MAX)) || (neg_over && (sum = INT_MIN));
     
+    return sum;
 }
 /******************************************************************************/
 
@@ -244,6 +285,55 @@ int main()
 
     printf("/2.68*********************************************************************/\n");
     printf("0x%.8x\t0x%.8x\t0x%.8x\n", lower_one_mask(32), lower_one_mask(1), lower_one_mask(17));
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.69*********************************************************************/\n");
+    printf("0x%.8x\t0x%.8x\t0x%.8x\t0x%.8x\n", rotate_left(0x12345678, 4), rotate_left(0x12345678, 20), rotate_left(0x12345678, 32), rotate_left(0x12345678, 0));
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.71*********************************************************************/\n");
+    assert(xbyte(0x00112233, 0) == 0x33);
+    assert(xbyte(0x00112233, 1) == 0x22);
+    assert(xbyte(0x00112233, 2) == 0x11);
+    assert(xbyte(0x00112233, 3) == 0x00);
+
+    assert(xbyte(0xAABBCCDD, 0) == 0xFFFFFFDD);
+    assert(xbyte(0xAABBCCDD, 1) == 0xFFFFFFCC);
+    assert(xbyte(0xAABBCCDD, 2) == 0xFFFFFFBB);
+    assert(xbyte(0xAABBCCDD, 3) == 0xFFFFFFAA);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.72*********************************************************************/\n");
+    int maxbytes = sizeof(int) * 10;
+    void* buf = malloc(maxbytes);
+    int val;
+
+    val = 0x12345678;
+    copy_int(val, buf, maxbytes);
+    assert(*(int*)buf == val);
+
+    val = 0xAABBCCDD;
+    copy_int(val, buf, 0);
+    assert(*(int*)buf != val);
+
+    free(buf);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.73*********************************************************************/\n");
+    assert(INT_MAX == saturating_add(INT_MAX, 0x1234));
+    assert(INT_MIN == saturating_add(INT_MIN, -0x1234));
+    assert(0x11 + 0x22 == saturating_add(0x11, 0x22));
+    printf("all test pass!!!\n");
     printf("/**************************************************************************/\n");
     printf("\n");
 
