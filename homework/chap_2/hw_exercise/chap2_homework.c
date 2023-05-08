@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <inttypes.h>
 
 //2.58
 /****************************************************************************/
@@ -187,6 +188,118 @@ int saturating_add(int x, int y){
 /******************************************************************************/
 
 
+//2.74
+/******************************************************************************/
+int tsub_ok(int x, int y){
+    int res = 1;
+
+    // 若y=INT_MIN，则一定溢出
+    (y == INT_MIN) && (res = 0);
+
+    // 若正溢出，则pos_over=1
+    // 若负溢出，则neg_over=1
+    int pos_over = x>0 && y<0 && x-y<0;
+    int neg_over = x<0 && y>0 && x-y>0;
+
+    res = res && !(pos_over || neg_over);
+    return res;
+}
+/******************************************************************************/
+
+
+//2.75
+/******************************************************************************/
+// use `int signed_high_prod(int x, int y)`
+int signed_high_prod(int x, int y) {
+  int64_t mul = (int64_t) x * y;
+  return mul >> 32;
+}
+
+unsigned another_unsigned_high_prod(unsigned x, unsigned y) {
+  uint64_t mul = (uint64_t) x * y;
+  return mul >> 32;
+}
+
+// 当调用`signed_high_prod`时，会将32位扩展为64位，式（2.18）可写为：
+// (x' * y') mod 2^w = [(x + signed_x*2^w)*(y + signed_y*2^w)] mod 2^w
+//                   = [x*y + (signed_y*x + signed_x*y)*2^w + signed_x*signed_y*2^2w] mod 2^W
+// x'-x的无符号表示，x-有符号的x，signed_x-x的符号位，w=32
+// 取余后得到无符号数乘法与补码乘法的低位表示相同。
+// 当不需要取余时，有：
+// x' * y' = x*y + (signed_y*x + signed_x*y)*2^w + signed_x*signed_y*2^2w，该式揭示了无符号乘法与补码乘法全部位之间的关系
+// 其中 `(signed_y*x + signed_x*y)*2^w` 等价于 `(signed_y*x + signed_x*y) >> w` 即将结果加到高位上
+// `signed_x*signed_y*2^2w` 超出了范围，不造成影响。
+unsigned unsigned_high_prod(unsigned x, unsigned y){
+    int w = sizeof(unsigned) << 3;
+    int signed_x = x >> (w - 1);
+    int signed_y = y >> (w - 1);
+    unsigned mul = signed_high_prod(x, y);
+    // mul即为补码乘法的高位表示，不需要再将`(signed_y*x + signed_x*y)`左移w位，直接加即可
+    return mul + x*signed_y + y*signed_x;
+}
+/******************************************************************************/
+
+
+//2.76
+/******************************************************************************/
+// int tmult_ok(int x, int y){
+//     int p = x*y;
+//     return !x || p/x == y;
+// }
+void *my_calloc(size_t nmemb, size_t size){
+    if(nmemb == 0 || size == 0){
+        return NULL;
+    }
+    size_t buf_size = nmemb*size;
+    if(buf_size/size == nmemb){
+        void *p = malloc(buf_size);
+        if(p != NULL)
+            memset(p, 0, buf_size);
+        return p;
+    }
+    return NULL;
+}
+/******************************************************************************/
+
+
+//2.78
+/******************************************************************************/
+// assume 0 <= k < w-1
+int divide_power2(int x, int k){
+    int is_neg = x & INT_MIN;
+    (is_neg && (x = x + (1 << k) - 1));
+    return x >> k;
+}
+/******************************************************************************/
+
+
+//2.79
+/******************************************************************************/
+int mul3div4(int x){
+    int mul = (x << 1) + x;
+    return divide_power2(mul, 2);
+}
+/******************************************************************************/
+
+
+//2.79
+/******************************************************************************/
+int threeforths(int x){
+    int div = divide_power2(x, 2);
+    printf("x/4=%d, x/4*3=%d\n", div, (div << 1) + div);
+    return (div << 1) + div;
+}
+/******************************************************************************/
+
+
+//2.82
+/******************************************************************************/
+// n = 0.yyyyyyy...
+// n<<k = y.yyyyyy... = Y + n
+// n*2^k - n = Y
+// n = Y / (2^k - 1)
+/******************************************************************************/
+
 int main()
 {
     int x = 0x89abdcef;
@@ -336,6 +449,76 @@ int main()
     printf("all test pass!!!\n");
     printf("/**************************************************************************/\n");
     printf("\n");
+
+
+    printf("/2.74*********************************************************************/\n");
+    assert(!tsub_ok(0x00, INT_MIN));
+    assert(tsub_ok(0x00, 0x00));
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+    printf("/2.75*********************************************************************/\n");
+    unsigned x1 = 0x12345678;
+    unsigned y1 = 0xFFFFFFFF;
+
+    assert(another_unsigned_high_prod(x1, y1) == unsigned_high_prod(x1, y1));
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+    printf("/2.76*********************************************************************/\n");
+    void* p;
+    p = my_calloc(0x1234, 1);
+    assert(p != NULL);
+    free(p);
+
+    p = my_calloc(SIZE_MAX, 2);
+    assert(p == NULL);
+    free(p);
+
+    p = my_calloc(0, 5);
+    assert(p == NULL);
+    free(p);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.78*********************************************************************/\n");
+    x = 0x80000007;
+    assert(divide_power2(x, 0) == x);
+    assert(divide_power2(x, 2) == x / 4);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.79*********************************************************************/\n");
+    x = 0x87654321;
+    assert(mul3div4(x) == x * 3 / 4);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+
+    printf("/2.80*********************************************************************/\n");
+    assert(threeforths(8) == 6);
+    assert(threeforths(9) == 6);
+    assert(threeforths(10) == 7);
+    assert(threeforths(11) == 8);
+    assert(threeforths(12) == 9);
+
+    assert(threeforths(-8) == -6);
+    assert(threeforths(-9) == -6);
+    assert(threeforths(-10) == -7);
+    assert(threeforths(-11) == -8);
+    assert(threeforths(-12) == -9);
+    printf("all test pass!!!\n");
+    printf("/**************************************************************************/\n");
+    printf("\n");
+
+   
 
     return 0;
 }
