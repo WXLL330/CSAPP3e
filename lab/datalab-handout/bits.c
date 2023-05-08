@@ -142,8 +142,15 @@ NOTES:
  *   Max ops: 14
  *   Rating: 1
  */
+// 0100 0101
+// 1011&0101 = 0001
+// 0100&1010 = 0000
+// 0001|0000 = ~(~(0001|0000)) = ~(~0001&~0000) = ~(1110&1111) = ~1110 = 0001
 int bitXor(int x, int y) {
-  return 2;
+  // a = x&~y 将x中为1，y中为0的位置1
+  // b = ~x&y 将y中为1，x中为0的位置1
+  // 再利用 a|b = ~(~(a|b)) = ~(~a&~b) 即可
+  return ~(~(x & ~y) & ~(~x & y));
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -152,9 +159,8 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
-
+// tmin = 0x80000000
+  return 1 << 31;
 }
 //2
 /*
@@ -164,8 +170,14 @@ int tmin(void) {
  *   Max ops: 10
  *   Rating: 1
  */
+// ~0x0 = 0xffffffff 
 int isTmax(int x) {
-  return 2;
+// tmax = 0x7fffffff
+// tmax + 1 = 0x80000000
+// ~(tmax + 1) = 0x7ffffffff = tmax
+// 还要注意特例-1，也满足上述条件
+// !!(1 + x)是想让 1+x 只在0、1中取值，防止取其他值影响后面的判断
+  return !!(1 + x) & !((~(x + 1)) ^ x);
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
