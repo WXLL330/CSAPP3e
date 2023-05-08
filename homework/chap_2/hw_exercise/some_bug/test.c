@@ -3,7 +3,7 @@
 
 int main()
 {
-    // gcc -g -Wa,-adlhn test.c > mytest.s 查看汇编文件
+    // gcc -g -Wa,-adlhn test.c > test.s 查看汇编文件
     // 可以看到编译器优化掉了 & 操作，只用了 cmpl 和 setle 指令
     // 即对表达式 !(-x&INT_MIN), 编译器只判断了x是否小于等于0，若是，则整体表达式值为1，这对 -2147483648 < x < 0 都成立
     // 所以当面对 x=INT_MIN 时，编译器不关心 -x 是否会溢出，而是直接套用上面的判断方法，最终导致值为1
