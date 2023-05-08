@@ -20,10 +20,10 @@
   16              		.cfi_def_cfa_register 6
    6:test.c        ****     // gcc -g -Wa,-adlhn test.c > mytest.s 查看汇编文件
    7:test.c        ****     // 可以看到编译器优化掉了 & 操作，只用了 cmpl 和 setle 指令
-   8:test.c        ****     // 即对表达式 !(-x&INT_MIN), 编译器只判断了x是否小于等于0，若是，则整�
-   9:test.c        ****     // 所以当面对 x=INT_MIN 时，编译器不关心 -x 是否会溢出，而是直接套用�
-  10:test.c        ****     // 而当我直接使用 !(-INT_MIN&INT_MIN) 时，编译器并没有采用上面的方法，�
-  11:test.c        ****     // 其实从 warning 也可以看出，编译时只有 test2 发出警告，提醒 -INT_MIN会�
+   8:test.c        ****     // 即对表达式 !(-x&INT_MIN), 编译器只判断了x是否小于等于0，若是，则整�
+   9:test.c        ****     // 所以当面对 x=INT_MIN 时，编译器不关心 -x 是否会溢出，而是直接套用�
+  10:test.c        ****     // 而当我直接使用 !(-INT_MIN&INT_MIN) 时，编译器并没有采用上面的方法，�
+  11:test.c        ****     // 其实从 warning 也可以看出，编译时只有 test2 发出警告，提醒 -INT_MIN会�
   12:test.c        ****     int my_int_min = INT_MIN, t= 0x9;
   17              		.loc 1 12 9
   18 0008 C745EC00 		movl	$-2147483648, -20(%rbp)
