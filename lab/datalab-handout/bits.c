@@ -270,14 +270,22 @@ int isLessOrEqual(int x, int y) {
  *   Max ops: 12
  *   Rating: 4 
  */
+// 判断x中是否存在为1的位，采用二分法，一直用x的高位与低位进行或运算
+// 如果x中存在为1的位，则二分到最高位位的结果为1，1 >> 31 = 0xffffffff + 1 = 0
+// 如果x为0，则二分到最高位位的结果为0, 0 >> 31 = 0x00000000 + 1 = 1
 int logicalNeg(int x) {
-  return 2;
+  x = x | (x << 16);
+  x = x | (x << 8);
+  x = x | (x << 4);
+  x = x | (x << 2);
+  x = x | (x << 1);
+  return (x >> 31) + 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
- *  Examples: howManyBits(12) = 5
- *            howManyBits(298) = 10
- *            howManyBits(-5) = 4
+ *  Examples: howManyBits(12) = 5       0 1100
+ *            howManyBits(298) = 10     01 0010 1010
+ *            howManyBits(-5) = 4       1011
  *            howManyBits(0)  = 1
  *            howManyBits(-1) = 1
  *            howManyBits(0x80000000) = 32
@@ -285,8 +293,42 @@ int logicalNeg(int x) {
  *  Max ops: 90
  *  Rating: 4
  */
+// 对于 x>0 ,找到最左边的1的位置，再加上1位符号位，即为所求位数
+// 对于 x<0 ,对x取反后找到最左边的1的位置，再加上1位符号位，即为所求位数
+// 对于 x=0 ,直接返回1
 int howManyBits(int x) {
-  return 0;
+  int isZero = !x;
+  int sign = x >> 31;
+  int mask = (!!x << 31) >> 31;
+  // 任何整数都能表示为 2^n n=0,1,2... 的和
+  // 对于32位的数，一定可以表示为 16 8 4 2 1 的和
+  int high_16, high_8, high_4, high_2, high_1, high_0, res;
+  // x>0 -> x=x
+  // x<0 -> x=~x
+  x = (~sign | ~x) & (sign | x);
+
+  // 检验高16位中是否有1，若有1，则返回16，没有1，则返回0
+  high_16 = (!((!!(x >> 16)) ^ 1)) << 4;
+  // 若high_16不为0，说明x中最高位的1在高16位中，则将x左移16位，之后再次判断在高8位还是低8位中，二分思想
+  x = x >> high_16;
+
+  high_8 = (!((!!(x >> 8)) ^ 1)) << 3;
+  x = x >> high_8;
+
+  high_4 = (!((!!(x >> 4)) ^ 1)) << 2;
+  x = x >> high_4;
+
+  high_2 = (!((!!(x >> 2)) ^ 1)) << 1;
+  x = x >> high_2;
+
+ 
+  high_1 = (!((!!(x >> 1)) ^ 1));
+  x = x >> high_1;
+
+  high_0 = x;
+
+  res = high_16 + high_8 + high_4 + high_2 + high_1 + high_0 + 1;
+  return isZero | (mask & res);
 }
 //float
 /* 
