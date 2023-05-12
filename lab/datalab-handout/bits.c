@@ -187,8 +187,13 @@ int isTmax(int x) {
  *   Max ops: 12
  *   Rating: 2
  */
+// 采用2分法，设x符合要求，则x的每一字节都符合要求
+// 那么x的高16位与x的低16位也一定符合要求，所以二者相与也一定符合要求
+// 一直重复上述过程直到得到一个字节，用该字节与0xAA相与，结果一定为0xAA，再与0xAA异或得到0，最后取非即可得到1
 int allOddBits(int x) {
-  return 2;
+  x = x & (x >> 16);
+  x = x & (x >> 8);
+  return !((x & 0xAA) ^ 0xAA);
 }
 /* 
  * negate - return -x 
@@ -198,7 +203,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
@@ -210,8 +215,16 @@ int negate(int x) {
  *   Max ops: 15
  *   Rating: 3
  */
+// 0x30 <= x <= 0x39
+// negate(0x39) <= negate(x) <= negate(0x30)
+// 即 ~0x39 + 1 <= -x <= ~0x30 + 1
+// 所以 ~0x39 + 1 + x <= 0, ~0x30 + 1 + x >= 0
+// 所以 ~0x39 + x < 0, 该项符号位一定为1
+//  ~0x30 + 1 + x >= 0，该项符号位一定为0
 int isAsciiDigit(int x) {
-  return 2;
+  int neg_max = ~0x30 + 1;
+  int neg_min = ~0x39;
+  return !((x + neg_max) >> 31) & ((x + neg_min) >> 31);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -220,8 +233,16 @@ int isAsciiDigit(int x) {
  *   Max ops: 16
  *   Rating: 3
  */
+// mask = 0x00000000  (~mask | y) & (mask | z) = z
+// mask = 0xffffffff  (~mask | y) & (mask | z) = y
+// 利用x构造出mask
+// x = 0  -> !x = 1 -> !x + ~1 = 0xffffffff -> !x + ~1 + 1 = 0x00000000
+// x != 0 -> !x = 0 -> !x + ~1 = 0xfffffffe -> !x + ~1 + 1 = 0xffffffff
+// x  = 0 -> mask = 0x00000000
+// x != 0 -> mask = 0xffffffff
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask = !x + ~1 + 1;
+  return (~mask | y) & (mask | z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -230,8 +251,15 @@ int conditional(int x, int y, int z) {
  *   Max ops: 24
  *   Rating: 3
  */
+// 当 x<0,y>0 时，可能会发生负溢出，结果必为1
+// 当 x>0,y<0 时，可能会发生正溢出，结果必为0
+// 除上述情况外，当 x 与 y 同号时，采用 x + (-y) 是否大于0来判断大小关系
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int Xsign = !!(x >> 31);
+  int Ysign = !!(y >> 31);
+  int Xpos_Yneg = !Xsign & Ysign;
+  int Xneg_Ypos = Xsign & !Ysign;
+  return !Xpos_Yneg & (Xneg_Ypos | !!(x + (~y) >> 31));
 }
 //4
 /* 
